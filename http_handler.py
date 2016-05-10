@@ -24,7 +24,7 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
 
     ERROR_CONTENT_TYPE = "text/html;charset=utf-8"
 
-    SERVER_INFO = 'Base HTTP'
+    SERVER_INFO = 'python'
 
     HTTP_RESPONSES = {
         100: ('Continue', 'Request received, please continue'),
@@ -115,6 +115,9 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
         if not hasattr(self, method_name):
             self.send_error(HTTPStatus.NOT_IMPLEMENTED, 'Unsupported method {}'.format(self.command))
 
+        method = getattr(self, method_name)
+        method()
+
     def parse_request(self):
         self.command = None
         self.path = None
@@ -155,12 +158,12 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
                 self.wfile.write(content)
 
     def log_request(self):
-        log('\n\tREQUEST\n\t{}'.format(self.request))
+        log('\n\t{}'.format(self.request))
 
     def log_error(self, code, message):
         log("\n\tERROR\n\t{} {}".format(code, message))
 
-    def send_response(self, code, message=None):
+    def send_response(self, code, message=''):
         self.send_status(code, message)
         self.send_header('Server', self.SERVER_INFO)
         self.send_header('Date', self.date_time_string())
@@ -170,6 +173,9 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
         return datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')
 
     def send_status(self, code, message):
+        if not message:
+            message = self.HTTP_RESPONSES[code][0]
+
         self._add_header("{} {} {}".format(self.HTTP_VERSION, code, message))
 
     def send_header(self, key, value):
