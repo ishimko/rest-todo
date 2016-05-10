@@ -149,7 +149,7 @@ class RESTHandler(http_handler.HTTPRequestHandler):
 
     def send_response(self, code, content=None):
         super(RESTHandler, self).send_response(code)
-        self.send_header('Content-Type', 'text/html;charset=utf-8')
+        self.send_header('Content-Type', 'application/json')
         if content is not None:
             self.send_header('Content-Length', len(content))
         self.end_headers()
