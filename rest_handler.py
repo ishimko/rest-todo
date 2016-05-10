@@ -22,24 +22,7 @@ class RESTHandler(http_handler.HTTPRequestHandler):
 
     ]
 
-    def do_GET(self):
-        if len(self.segments) < 2:
-            self.send_error(HTTPStatus.FORBIDDEN)
-            return
-
-        method = self.segments[1]
-        if method == 'todo':
-            if len(self.segments) == 3:
-                try:
-                    task_id = int(self.segments[2])
-                except ValueError:
-                    self.send_error(HTTPStatus.NOT_FOUND)
-                    return
-                self.get_task(task_id)
-            else:
-                self.get_all_tasks()
-        else:
-            self.send_error(HTTPStatus.NOT_FOUND)
+    APP_NAME = 'todo'
 
     def _send_json(self, json_object, code=HTTPStatus.OK):
         self.send_response(code, json.dumps(json_object, indent=True))
@@ -62,22 +45,78 @@ class RESTHandler(http_handler.HTTPRequestHandler):
             return False
 
     def get_all_tasks(self):
-        log('sending all tasks')
+        log('get_all_tasks: sending all tasks')
         self._send_json(self.tasks)
 
-    def do_POST(self):
-        if len(self.segments) < 2:
+    def do_GET(self):
+        if len(self.segments) < 1:
             self.send_error(HTTPStatus.FORBIDDEN)
             return
 
-        method = self.segments[1]
-        if method == 'todo':
-            if len(self.headers) == 2 and self._request_to_json() and 'title' in self.request_data:
+        app = self.segments[0]
+        if app == self.APP_NAME:
+            if len(self.segments) == 2:
+                try:
+                    task_id = int(self.segments[1])
+                except ValueError:
+                    self.send_error(HTTPStatus.NOT_FOUND)
+                    return
+                self.get_task(task_id)
+            elif len(self.segments) == 1:
+                self.get_all_tasks()
+            else:
+                self.send_error(HTTPStatus.NOT_FOUND)
+        else:
+            self.send_error(HTTPStatus.NOT_FOUND)
+
+    def do_POST(self):
+        if len(self.segments) < 1:
+            self.send_error(HTTPStatus.FORBIDDEN)
+            return
+
+        app = self.segments[0]
+        if app == self.APP_NAME:
+            if len(self.segments) == 1 and self._request_to_json() and 'title' in self.request_data:
                 self.add_task(self.request_data)
             else:
                 self.send_error(HTTPStatus.BAD_REQUEST)
         else:
             self.send_error(HTTPStatus.NOT_FOUND)
+
+    def do_PUT(self):
+        if len(self.segments) < 1:
+            self.send_error(HTTPStatus.FORBIDDEN)
+            return
+
+        app = self.segments[0]
+        if app == self.APP_NAME and len(self.segments) == 2:
+            try:
+                task_id = int(self.segments[1])
+            except ValueError:
+                self.send_error(HTTPStatus.BAD_REQUEST)
+                return
+
+            if self._request_to_json():
+                self.update_task(task_id, self.request_data)
+            else:
+                self.send_error(HTTPStatus.BAD_REQUEST)
+        else:
+            self.send_error(HTTPStatus.NOT_FOUND)
+
+    def do_DELETE(self):
+        if len(self.segments) < 1:
+            self.send_error(HTTPStatus.FORBIDDEN)
+            return
+
+        app = self.segments[0]
+        if app == self.APP_NAME and len(self.segments) == 2:
+            try:
+                task_id = int(self.segments[1])
+            except ValueError:
+                self.send_error(HTTPStatus.BAD_REQUEST)
+                return
+
+            self.delete_task(task_id)
 
     def add_task(self, task):
         new_task = {
@@ -87,46 +126,26 @@ class RESTHandler(http_handler.HTTPRequestHandler):
             'done': False
         }
         self.tasks.append(new_task)
+
+        log('new task added')
+
         self._send_json(new_task, code=HTTPStatus.CREATED)
 
     def update_task(self, task_id, new_task):
         task = [x for x in self.tasks if x['id'] == task_id]
 
         if not task:
+            log('update_task: task {} not found'.format(task_id))
             self.send_error(HTTPStatus.NOT_FOUND)
-            return
         else:
+            log('update_task: task {} updated'.format(task_id))
+
             task = task[0]
+            task['title'] = new_task.get('title', task['title'])
+            task['description'] = new_task.get('description', task['description'])
+            task['done'] = new_task.get('done', task['done'])
 
-        task['title'] = new_task.get('title', task['title'])
-        task['description'] = new_task.get('description', task['description'])
-        task['done'] = new_task.get('done', task['done'])
-
-        self._send_json(task)
-
-    def do_DELETE(self):
-        if len(self.segments) < 2:
-            self.send_error(HTTPStatus.FORBIDDEN)
-            return
-
-        self.send_response(HTTPStatus.OK, 'DELETE')
-
-    def do_PUT(self):
-        if len(self.segments) < 2:
-            self.send_error(HTTPStatus.FORBIDDEN)
-            return
-
-        if len(self.segments) == 3:
-            try:
-                task_id = int(self.segments[2])
-            except ValueError:
-                self.send_error(HTTPStatus.BAD_REQUEST)
-                return
-
-            if self._request_to_json():
-                self.update_task(task_id, self.request_data)
-            else:
-                self.send_error(HTTPStatus.BAD_REQUEST)
+            self._send_json(task)
 
     def send_response(self, code, content=None):
         super(RESTHandler, self).send_response(code)
@@ -145,7 +164,18 @@ class RESTHandler(http_handler.HTTPRequestHandler):
 
         if not task:
             self.send_error(HTTPStatus.NOT_FOUND)
-            log('task {} not found'.format(task_id))
+            log('get_task: task {} not found'.format(task_id))
         else:
-            log('sending task {}'.format(task_id))
+            log('get_task: task {} sent'.format(task_id))
             self._send_json(task[0])
+
+    def delete_task(self, task_id):
+        task = [x for x in self.tasks if x['id'] == task_id]
+
+        if not task:
+            log('delete_task: task {} not found'.format(task_id))
+            self.send_error(HTTPStatus.NOT_FOUND)
+        else:
+            log('delete_task: task {} deleted'.format(task_id))
+            self.tasks.remove(task[0])
+            self._send_json({'result': True})

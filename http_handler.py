@@ -123,7 +123,7 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
         words = self.request.split()
         if len(words) == 3:
             self.command, self.path, version = words
-            self.segments = self.path.split('/')
+            self.segments = [x for x in self.path.split('/') if x]
 
             if version[:len('HTTP/')] != 'HTTP/':
                 self.send_error(HTTPStatus.BAD_REQUEST, 'Bad request version {}'.format(version))
