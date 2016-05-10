@@ -155,10 +155,10 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
                 self.wfile.write(content)
 
     def log_request(self):
-        log('request "{}"'.format(self.request))
+        log('\n\tREQUEST\n\t{}'.format(self.request))
 
     def log_error(self, code, message):
-        log("error: \n\tcode: {}\n\tmessage: {}".format(code, message))
+        log("\n\tERROR\n\t{} {}".format(code, message))
 
     def send_response(self, code, message=None):
         self.send_status(code, message)
