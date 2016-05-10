@@ -1,6 +1,4 @@
 import socketserver
-import http
-from http import server
 from logger import log
 from http import HTTPStatus
 from datetime import datetime
@@ -135,6 +133,23 @@ class HTTPRequestHandler(socketserver.StreamRequestHandler):
             self.send_error(HTTPStatus.BAD_REQUEST, 'Bad request syntax {}'.format(self.request))
             return False
 
+        return self._parse_headers()
+
+    def _parse_headers(self):
+        self.headers = {}
+        while True:
+            line = str(self.rfile.readline().strip(), 'iso-8859-1')
+            if line in ('\r\n', '\n', ''):
+                break
+            semicolon_pos = line.find(':')
+            if semicolon_pos == -1:
+                return False
+
+            header_name = line[:semicolon_pos].strip()
+            header_value = line[semicolon_pos + 1:].strip()
+            if header_value.isnumeric():
+                header_value = int(header_value)
+            self.headers[header_name] = header_value
         return True
 
     def send_error(self, code, custom_message=None):

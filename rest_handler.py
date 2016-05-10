@@ -46,7 +46,8 @@ class RESTHandler(http_handler.HTTPRequestHandler):
         self._send_json(self.tasks)
 
     def do_POST(self):
-        self.send_response(HTTPStatus.OK, 'POST')
+        post_data = self.rfile.read(self.headers['Content-Length'])
+        self.send_response(HTTPStatus.OK, post_data)
 
     def do_DELETE(self):
         self.send_response(HTTPStatus.OK, 'DELETE')
@@ -62,7 +63,8 @@ class RESTHandler(http_handler.HTTPRequestHandler):
         self.end_headers()
 
         if content is not None:
-            content = content.encode('UTF-8', 'replace')
+            if isinstance(content, str):
+                content = content.encode('UTF-8', 'replace')
             self.wfile.write(content)
 
     def get_task(self, task_id):
@@ -70,7 +72,7 @@ class RESTHandler(http_handler.HTTPRequestHandler):
 
         if not task:
             self.send_error(HTTPStatus.NOT_FOUND)
-            log('task {} not found', format(task_id))
+            log('task {} not found'.format(task_id))
         else:
             log('sending task {}'.format(task_id))
             self._send_json(task[0])
