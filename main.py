@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from logger import log
 from rest_handler import RESTHandler
 from socketserver import TCPServer

@@ -25,7 +25,7 @@ class RESTHandler(http_handler.HTTPRequestHandler):
     APP_NAME = 'todo'
 
     def _send_json(self, json_object, code=HTTPStatus.OK):
-        self.send_response(code, json.dumps(json_object, indent=True))
+        self.send_response(code, json.dumps(json_object, indent=True) + '\r\n')
 
     def _request_to_json(self):
         if self._read_request_data():
